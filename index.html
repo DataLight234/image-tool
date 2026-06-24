@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 	<link rel="manifest" href="manifest.json">
-    <title>轻量级图片处理工具 V5</title>
+    <title>轻量级图片处理工具 V6</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 JSZip 用于批量打包下载，解决多文件下载浏览器兼容问题 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         .checkered-bg {
             background-color: #f0f0f0;
@@ -44,16 +42,22 @@
         <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
             <h1 class="text-xl font-bold text-blue-600 flex items-center gap-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                图片处理大师 V5
+                图片处理大师 V6
             </h1>
-            <button id="resetBtn" class="hidden text-sm text-gray-500 hover:text-gray-700 transition font-medium bg-gray-100 px-3 py-1 rounded-full">重新上传</button>
+            <div class="flex gap-2">
+                <button id="addMoreBtn" class="hidden text-sm text-blue-600 hover:text-blue-800 transition font-medium bg-blue-50 px-3 py-1 rounded-full relative overflow-hidden">
+                    <span>+ 继续添加图片</span>
+                    <input type="file" id="addMoreInput" accept="image/jpeg, image/png, image/webp, image/*" multiple="multiple" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                </button>
+                <button id="resetBtn" class="hidden text-sm text-gray-500 hover:text-gray-700 transition font-medium bg-gray-100 px-3 py-1 rounded-full">清空重来</button>
+            </div>
         </div>
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-6">
         
         <div id="uploadArea" class="flex flex-col items-center justify-center w-full h-[60vh] border-2 border-dashed border-blue-300 rounded-2xl bg-blue-50 hover:bg-blue-100 transition cursor-pointer relative overflow-hidden group">
-            <input type="file" id="fileInput" accept="image/*" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+            <input type="file" id="fileInput" accept="image/jpeg, image/png, image/webp, image/*" multiple="multiple" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
             <svg class="w-16 h-16 text-blue-400 mb-4 group-hover:scale-110 transition duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
             <p class="text-lg font-medium text-blue-700">点击或拖拽上传图片</p>
             <p class="text-sm text-blue-500 mt-2">支持 JPG, PNG, WEBP，多选自动启用批量应用与打包</p>
@@ -174,17 +178,17 @@
                     </button>
                     
                     <div id="batchArea" class="mt-4 pt-4 border-t border-gray-100 hidden">
-                        <p class="text-xs text-gray-500 mb-2 font-medium">✨ 当前修改（裁切/缩放等）将应用到全部图片</p>
-                        <button id="batchDownloadBtn" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold py-3 rounded-xl transition flex justify-center items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-                            <span id="batchBtnText">打包下载全部 ZIP</span>
-                        </button>
-                        <p id="batchStatus" class="text-xs text-indigo-600 mt-2 text-center font-medium"></p>
-                    </div>
+                    <p class="text-xs text-gray-500 mb-2 font-medium">✨ 当前修改（裁切/缩放等）将应用到全部图片</p>
+                    <button id="batchDownloadBtn" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold py-3 rounded-xl transition flex justify-center items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        <span id="batchBtnText">逐个下载全部图片</span>
+                    </button>
+                    <p id="batchStatus" class="text-xs text-indigo-600 mt-2 text-center font-medium"></p>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
+</main>
 
     <canvas id="processCanvas" style="display: none;"></canvas>
 
@@ -208,11 +212,13 @@
             workspace: document.getElementById('workspace'),
             previewImage: document.getElementById('previewImage'),
             imageContainer: document.getElementById('imageContainer'),
-            cropBox: document.getElementById('cropBox'),
-            imageInfo: document.getElementById('imageInfo'),
-            resetBtn: document.getElementById('resetBtn'),
-            
-            undoBtn: document.getElementById('undoBtn'),
+        cropBox: document.getElementById('cropBox'),
+        imageInfo: document.getElementById('imageInfo'),
+        resetBtn: document.getElementById('resetBtn'),
+        addMoreBtn: document.getElementById('addMoreBtn'),
+        addMoreInput: document.getElementById('addMoreInput'),
+        
+        undoBtn: document.getElementById('undoBtn'),
             redoBtn: document.getElementById('redoBtn'),
             resizeWidth: document.getElementById('resizeWidth'),
             resizeHeight: document.getElementById('resizeHeight'),
@@ -229,55 +235,65 @@
 
         // --- 全局拖拽与上传逻辑 ---
         ['dragover', 'dragleave', 'drop'].forEach(evt => {
-            document.body.addEventListener(evt, e => e.preventDefault());
-        });
-        
-        els.uploadArea.addEventListener('dragover', () => els.uploadArea.classList.add('bg-blue-100', 'border-blue-500'));
-        els.uploadArea.addEventListener('dragleave', () => els.uploadArea.classList.remove('bg-blue-100', 'border-blue-500'));
-        els.uploadArea.addEventListener('drop', e => {
-            els.uploadArea.classList.remove('bg-blue-100', 'border-blue-500');
-            handleFilesSelect(e.dataTransfer.files);
-        });
-        els.fileInput.addEventListener('change', e => handleFilesSelect(e.target.files));
+        document.body.addEventListener(evt, e => e.preventDefault());
+    });
+    
+    els.uploadArea.addEventListener('dragover', () => els.uploadArea.classList.add('bg-blue-100', 'border-blue-500'));
+    els.uploadArea.addEventListener('dragleave', () => els.uploadArea.classList.remove('bg-blue-100', 'border-blue-500'));
+    els.uploadArea.addEventListener('drop', e => {
+        els.uploadArea.classList.remove('bg-blue-100', 'border-blue-500');
+        handleFilesSelect(e.dataTransfer.files, false);
+    });
+    els.fileInput.addEventListener('change', e => handleFilesSelect(e.target.files, false));
+    els.addMoreInput.addEventListener('change', e => handleFilesSelect(e.target.files, true));
 
-        function handleFilesSelect(files) {
-            const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
-            if (!validFiles.length) return;
+    function handleFilesSelect(files, append = false) {
+        const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+        if (!validFiles.length) return;
+        
+        if (append) {
+            state.selectedFiles = state.selectedFiles.concat(validFiles);
+        } else {
             state.selectedFiles = validFiles;
-            
-            const file = validFiles[0];
-            state.originalName = file.name.substring(0, file.name.lastIndexOf('.')) || 'image';
-            state.originalMime = file.type || 'image/png';
-            
+        }
+        
+        const file = state.selectedFiles[0]; // 预览第一张
+        state.originalName = file.name.substring(0, file.name.lastIndexOf('.')) || 'image';
+        state.originalMime = file.type || 'image/png';
+        
+        if (!append) {
             const reader = new FileReader();
             reader.onload = (e) => loadNewImage(e.target.result, true);
             reader.readAsDataURL(file);
-            updateBatchUI();
+        } else {
+            updateBatchUI(); // 仅追加文件时，刷新批量下载按钮状态
         }
+    }
 
-        els.resetBtn.addEventListener('click', () => location.reload());
+    els.resetBtn.addEventListener('click', () => location.reload());
 
-        function loadNewImage(dataUrl, isFirstLoad = false, addToHistory = true) {
-            els.previewImage.style.opacity = '0';
-            state.currentImage.onload = () => {
-                state.currentWidth = state.currentImage.width;
-                state.currentHeight = state.currentImage.height;
-                state.aspectRatio = state.currentWidth / state.currentHeight;
-                
-                if (isFirstLoad) {
-                    state.originalWidth = state.currentWidth;
-                    state.originalHeight = state.currentHeight;
-                    state.currentActions = [];
-                    state.history = [];
-                    state.historyIndex = -1;
-                    els.uploadArea.classList.add('hidden');
-                    els.workspace.classList.remove('hidden');
-                    els.workspace.classList.add('flex');
-                    els.resetBtn.classList.remove('hidden');
-                }
-                
-                els.previewImage.src = dataUrl;
-                setTimeout(() => els.previewImage.style.opacity = '1', 50);
+    function loadNewImage(dataUrl, isFirstLoad = false, addToHistory = true) {
+        els.previewImage.style.opacity = '0';
+        state.currentImage.onload = () => {
+            state.currentWidth = state.currentImage.width;
+            state.currentHeight = state.currentImage.height;
+            state.aspectRatio = state.currentWidth / state.currentHeight;
+            
+            if (isFirstLoad) {
+                state.originalWidth = state.currentWidth;
+                state.originalHeight = state.currentHeight;
+                state.currentActions = [];
+                state.history = [];
+                state.historyIndex = -1;
+                els.uploadArea.classList.add('hidden');
+                els.workspace.classList.remove('hidden');
+                els.workspace.classList.add('flex');
+                els.resetBtn.classList.remove('hidden');
+                els.addMoreBtn.classList.remove('hidden');
+            }
+            
+            els.previewImage.src = dataUrl;
+            setTimeout(() => els.previewImage.style.opacity = '1', 50);
                 
                 els.imageInfo.textContent = `${state.currentWidth} × ${state.currentHeight} px`;
                 els.resizeWidth.value = state.currentWidth;
@@ -516,17 +532,17 @@
         els.exportQuality.addEventListener('input', e => els.qualityValue.textContent = Math.round(e.target.value * 100) + '%');
 
         function updateBatchUI() {
-            const count = state.selectedFiles.length;
-            const batchArea = document.getElementById('batchArea');
-            if (count > 1) {
-                batchArea.classList.remove('hidden');
-                document.getElementById('batchBtnText').textContent = `打包下载全部 (${count} 张)`;
-            } else {
-                batchArea.classList.add('hidden');
-            }
+        const count = state.selectedFiles.length;
+        const batchArea = document.getElementById('batchArea');
+        if (count > 1) {
+            batchArea.classList.remove('hidden');
+            document.getElementById('batchBtnText').textContent = `逐个下载全部 (${count} 张)`;
+        } else {
+            batchArea.classList.add('hidden');
         }
+    }
 
-        document.getElementById('downloadBtn').addEventListener('click', () => {
+    document.getElementById('downloadBtn').addEventListener('click', () => {
             const format = getOutputFormat();
             const dataUrl = els.canvas.toDataURL(format, parseFloat(els.exportQuality.value));
             const a = document.createElement('a');
@@ -576,12 +592,11 @@
             btn.disabled = true;
             
             try {
-                const zip = new JSZip();
                 const quality = parseFloat(els.exportQuality.value);
                 
                 for (let i = 0; i < state.selectedFiles.length; i++) {
                     const file = state.selectedFiles[i];
-                    status.textContent = `正在处理并打包: ${i + 1} / ${state.selectedFiles.length}`;
+                    status.textContent = `正在处理并下载: ${i + 1} / ${state.selectedFiles.length} (若有拦截提示请点允许)`;
                     
                     const format = getOutputFormat(file.type);
                     const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || `image_${i}`;
@@ -593,21 +608,21 @@
                     const processedCanvas = await applyActionsToImage(img, state.currentActions);
                     
                     const dataUrl = processedCanvas.toDataURL(format, quality);
-                    const base64Data = dataUrl.split(',')[1];
-                    zip.file(fileName, base64Data, {base64: true});
+                    
+                    // 触发逐个下载
+                    const a = document.createElement('a');
+                    a.download = fileName;
+                    a.href = dataUrl;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    
+                    // 暂停600毫秒，给浏览器缓冲时间，防止因过快连续触发被浏览器彻底拦截
+                    await new Promise(resolve => setTimeout(resolve, 600));
                 }
                 
-                status.textContent = "生成 ZIP 压缩包中...";
-                const content = await zip.generateAsync({type: "blob"});
-                const zipUrl = URL.createObjectURL(content);
-                
-                const a = document.createElement('a');
-                a.download = `Batch_Export_${new Date().getTime().toString().slice(-4)}.zip`;
-                a.href = zipUrl;
-                a.click();
-                
-                status.textContent = "✅ 打包下载完成！";
-                setTimeout(() => status.textContent = "", 3000);
+                status.textContent = "✅ 全部下载指令已发送！";
+                setTimeout(() => status.textContent = "", 4000);
             } catch (err) {
                 status.textContent = "❌ 处理失败: " + err.message;
             } finally {
