@@ -113,10 +113,10 @@
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <h2 class="text-sm font-bold mb-3 flex items-center gap-2 text-gray-700"><span>🔄</span> 旋转与翻转</h2>
                     <div class="grid grid-cols-4 gap-2">
-                        <button id="rotateLeftBtn" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg></button>
-                        <button id="rotateRightBtn" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10H11a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"/></svg></button>
-                        <button id="flipHBtn" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></button>
-                        <button id="flipVBtn" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4-4l-4-4"/></svg></button>
+                        <button id="rotateLeftBtn" title="向左旋转90°" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg></button>
+                        <button id="rotateRightBtn" title="向右旋转90°" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10H11a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"/></svg></button>
+                        <button id="flipHBtn" title="水平翻转" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></button>
+                        <button id="flipVBtn" title="垂直翻转" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4-4l-4-4"/></svg></button>
                     </div>
                 </div>
 
@@ -165,12 +165,23 @@
                             <option value="image/webp">WEBP (现代格式)</option>
                         </select>
                     </div>
+                    <div class="mb-4" id="backgroundControl" style="display: none;">
+                        <label class="text-xs text-gray-500 block mb-1">透明底转 JPG 时</label>
+                        <select id="jpegBackground" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="white">填充白底</option>
+                            <option value="black">填充黑底</option>
+                        </select>
+                    </div>
                     <div class="mb-4" id="qualityControl">
                         <label class="text-xs text-gray-500 flex justify-between mb-1">
                             <span>压缩质量</span>
                             <span id="qualityValue" class="font-mono text-blue-600 bg-blue-50 px-1 rounded">90%</span>
                         </label>
                         <input type="range" id="exportQuality" min="0.1" max="1" step="0.05" value="0.9" class="w-full accent-blue-600">
+                    </div>
+                    <div class="mb-4">
+                        <label class="text-xs text-gray-500 block mb-1">目标大小 KB (可选)</label>
+                        <input type="number" id="targetSizeKb" min="1" placeholder="例如 500" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                     <button id="downloadBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition flex justify-center items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
@@ -212,22 +223,25 @@
             workspace: document.getElementById('workspace'),
             previewImage: document.getElementById('previewImage'),
             imageContainer: document.getElementById('imageContainer'),
-        cropBox: document.getElementById('cropBox'),
-        imageInfo: document.getElementById('imageInfo'),
-        resetBtn: document.getElementById('resetBtn'),
-        addMoreBtn: document.getElementById('addMoreBtn'),
-        addMoreInput: document.getElementById('addMoreInput'),
-        
-        undoBtn: document.getElementById('undoBtn'),
+            cropBox: document.getElementById('cropBox'),
+            imageInfo: document.getElementById('imageInfo'),
+            resetBtn: document.getElementById('resetBtn'),
+            addMoreBtn: document.getElementById('addMoreBtn'),
+            addMoreInput: document.getElementById('addMoreInput'),
+            
+            undoBtn: document.getElementById('undoBtn'),
             redoBtn: document.getElementById('redoBtn'),
             resizeWidth: document.getElementById('resizeWidth'),
             resizeHeight: document.getElementById('resizeHeight'),
             keepRatio: document.getElementById('keepRatio'),
             
             exportFormat: document.getElementById('exportFormat'),
+            backgroundControl: document.getElementById('backgroundControl'),
+            jpegBackground: document.getElementById('jpegBackground'),
             qualityControl: document.getElementById('qualityControl'),
             exportQuality: document.getElementById('exportQuality'),
             qualityValue: document.getElementById('qualityValue'),
+            targetSizeKb: document.getElementById('targetSizeKb'),
             
             canvas: document.getElementById('processCanvas'),
             ctx: document.getElementById('processCanvas').getContext('2d', { willReadFrequently: true })
@@ -235,66 +249,66 @@
 
         // --- 全局拖拽与上传逻辑 ---
         ['dragover', 'dragleave', 'drop'].forEach(evt => {
-        document.body.addEventListener(evt, e => e.preventDefault());
-    });
-    
-    els.uploadArea.addEventListener('dragover', () => els.uploadArea.classList.add('bg-blue-100', 'border-blue-500'));
-    els.uploadArea.addEventListener('dragleave', () => els.uploadArea.classList.remove('bg-blue-100', 'border-blue-500'));
-    els.uploadArea.addEventListener('drop', e => {
-        els.uploadArea.classList.remove('bg-blue-100', 'border-blue-500');
-        handleFilesSelect(e.dataTransfer.files, false);
-    });
-    els.fileInput.addEventListener('change', e => handleFilesSelect(e.target.files, false));
-    els.addMoreInput.addEventListener('change', e => handleFilesSelect(e.target.files, true));
+            document.body.addEventListener(evt, e => e.preventDefault());
+        });
+        
+        els.uploadArea.addEventListener('dragover', () => els.uploadArea.classList.add('bg-blue-100', 'border-blue-500'));
+        els.uploadArea.addEventListener('dragleave', () => els.uploadArea.classList.remove('bg-blue-100', 'border-blue-500'));
+        els.uploadArea.addEventListener('drop', e => {
+            els.uploadArea.classList.remove('bg-blue-100', 'border-blue-500');
+            handleFilesSelect(e.dataTransfer.files, false);
+        });
+        els.fileInput.addEventListener('change', e => handleFilesSelect(e.target.files, false));
+        els.addMoreInput.addEventListener('change', e => handleFilesSelect(e.target.files, true));
 
-    function handleFilesSelect(files, append = false) {
-        const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
-        if (!validFiles.length) return;
-        
-        if (append) {
-            state.selectedFiles = state.selectedFiles.concat(validFiles);
-        } else {
-            state.selectedFiles = validFiles;
-        }
-        
-        const file = state.selectedFiles[0]; // 预览第一张
-        state.originalName = file.name.substring(0, file.name.lastIndexOf('.')) || 'image';
-        state.originalMime = file.type || 'image/png';
-        
-        if (!append) {
-            const reader = new FileReader();
-            reader.onload = (e) => loadNewImage(e.target.result, true);
-            reader.readAsDataURL(file);
-        }
-        
-        // 修复：无论是首次上传多张，还是追加图片，都需要立即刷新批量按钮的状态
-        updateBatchUI();
-    }
-
-    els.resetBtn.addEventListener('click', () => location.reload());
-
-    function loadNewImage(dataUrl, isFirstLoad = false, addToHistory = true) {
-        els.previewImage.style.opacity = '0';
-        state.currentImage.onload = () => {
-            state.currentWidth = state.currentImage.width;
-            state.currentHeight = state.currentImage.height;
-            state.aspectRatio = state.currentWidth / state.currentHeight;
+        function handleFilesSelect(files, append = false) {
+            const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (!validFiles.length) return;
             
-            if (isFirstLoad) {
-                state.originalWidth = state.currentWidth;
-                state.originalHeight = state.currentHeight;
-                state.currentActions = [];
-                state.history = [];
-                state.historyIndex = -1;
-                els.uploadArea.classList.add('hidden');
-                els.workspace.classList.remove('hidden');
-                els.workspace.classList.add('flex');
-                els.resetBtn.classList.remove('hidden');
-                els.addMoreBtn.classList.remove('hidden');
+            if (append) {
+                state.selectedFiles = state.selectedFiles.concat(validFiles);
+            } else {
+                state.selectedFiles = validFiles;
             }
             
-            els.previewImage.src = dataUrl;
-            setTimeout(() => els.previewImage.style.opacity = '1', 50);
+            const file = state.selectedFiles[0]; // 预览第一张
+            state.originalName = file.name.substring(0, file.name.lastIndexOf('.')) || 'image';
+            state.originalMime = file.type || 'image/png';
+            
+            if (!append) {
+                const reader = new FileReader();
+                reader.onload = (e) => loadNewImage(e.target.result, true);
+                reader.readAsDataURL(file);
+            }
+            
+            // 修复：无论是首次上传多张，还是追加图片，都需要立即刷新批量按钮的状态
+            updateBatchUI();
+        }
+
+        els.resetBtn.addEventListener('click', () => location.reload());
+
+        function loadNewImage(dataUrl, isFirstLoad = false, addToHistory = true) {
+            els.previewImage.style.opacity = '0';
+            state.currentImage.onload = () => {
+                state.currentWidth = state.currentImage.width;
+                state.currentHeight = state.currentImage.height;
+                state.aspectRatio = state.currentWidth / state.currentHeight;
+                
+                if (isFirstLoad) {
+                    state.originalWidth = state.currentWidth;
+                    state.originalHeight = state.currentHeight;
+                    state.currentActions = [];
+                    state.history = [];
+                    state.historyIndex = -1;
+                    els.uploadArea.classList.add('hidden');
+                    els.workspace.classList.remove('hidden');
+                    els.workspace.classList.add('flex');
+                    els.resetBtn.classList.remove('hidden');
+                    els.addMoreBtn.classList.remove('hidden');
+                }
+                
+                els.previewImage.src = dataUrl;
+                setTimeout(() => els.previewImage.style.opacity = '1', 50);
                 
                 els.imageInfo.textContent = `${state.currentWidth} × ${state.currentHeight} px`;
                 els.resizeWidth.value = state.currentWidth;
@@ -527,25 +541,92 @@
         }
         function getExtension(format) { return { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[format] || 'png'; }
 
-        els.exportFormat.addEventListener('change', () => {
-            els.qualityControl.style.opacity = els.exportFormat.value === 'image/png' ? '0.4' : '1';
-        });
+        // 控制显示隐藏逻辑
+        function toggleExportSettings() {
+            const format = getOutputFormat();
+            const isPng = format === 'image/png';
+            const isJpeg = format === 'image/jpeg';
+            els.qualityControl.style.opacity = isPng ? '0.4' : '1';
+            els.qualityControl.style.pointerEvents = isPng ? 'none' : 'auto';
+            if(els.backgroundControl) {
+                els.backgroundControl.style.display = isJpeg ? 'block' : 'none';
+            }
+        }
+        els.exportFormat.addEventListener('change', toggleExportSettings);
+        toggleExportSettings(); // 初始调用
+
         els.exportQuality.addEventListener('input', e => els.qualityValue.textContent = Math.round(e.target.value * 100) + '%');
 
         function updateBatchUI() {
-        const count = state.selectedFiles.length;
-        const batchArea = document.getElementById('batchArea');
-        if (count > 1) {
-            batchArea.classList.remove('hidden');
-            document.getElementById('batchBtnText').textContent = `逐个下载全部 (${count} 张)`;
-        } else {
-            batchArea.classList.add('hidden');
+            const count = state.selectedFiles.length;
+            const batchArea = document.getElementById('batchArea');
+            if (count > 1) {
+                batchArea.classList.remove('hidden');
+                document.getElementById('batchBtnText').textContent = `逐个下载全部 (${count} 张)`;
+            } else {
+                batchArea.classList.add('hidden');
+            }
         }
-    }
 
-    document.getElementById('downloadBtn').addEventListener('click', () => {
+        // 计算 DataURL 大小（字节）
+        function dataUrlToBytes(dataUrl) {
+            const commaIndex = dataUrl.indexOf(',');
+            const base64 = commaIndex >= 0 ? dataUrl.slice(commaIndex + 1) : dataUrl;
+            return Math.ceil(base64.length * 3 / 4);
+        }
+
+        // 统一处理导出逻辑：包含背景色填充和二分法大小压缩
+        function exportCanvasWithSettings(sourceCanvas, format, initialQuality) {
+            let targetCanvas = sourceCanvas;
+            
+            // 1. 如果是转为 JPG，处理透明底填充
+            if (format === 'image/jpeg') {
+                targetCanvas = document.createElement('canvas');
+                targetCanvas.width = sourceCanvas.width;
+                targetCanvas.height = sourceCanvas.height;
+                const ctx = targetCanvas.getContext('2d');
+                ctx.fillStyle = els.jpegBackground && els.jpegBackground.value === 'black' ? '#000000' : '#FFFFFF';
+                ctx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+                ctx.drawImage(sourceCanvas, 0, 0);
+            }
+
+            // 2. 如果没设置目标 KB 大小，或格式为 PNG，则直接导出
+            const targetKb = els.targetSizeKb ? parseInt(els.targetSizeKb.value, 10) : 0;
+            if (!targetKb || targetKb <= 0 || format === 'image/png') {
+                return targetCanvas.toDataURL(format, initialQuality);
+            }
+
+            // 3. 二分法精准压缩到指定 KB 内
+            const targetBytes = targetKb * 1024;
+            let low = 0.1;
+            let high = initialQuality;
+            let best = targetCanvas.toDataURL(format, low);
+
+            // 如果最低质量还是超出大小，只能返回最低质量的
+            if (dataUrlToBytes(best) > targetBytes) return best;
+
+            const highQualityDataUrl = targetCanvas.toDataURL(format, high);
+            if (dataUrlToBytes(highQualityDataUrl) <= targetBytes) return highQualityDataUrl;
+
+            // 进行 8 次二分查找逼近目标大小
+            for (let i = 0; i < 8; i++) {
+                const mid = (low + high) / 2;
+                const candidate = targetCanvas.toDataURL(format, mid);
+                if (dataUrlToBytes(candidate) <= targetBytes) {
+                    best = candidate;
+                    low = mid;
+                } else {
+                    high = mid;
+                }
+            }
+            return best;
+        }
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
             const format = getOutputFormat();
-            const dataUrl = els.canvas.toDataURL(format, parseFloat(els.exportQuality.value));
+            const quality = parseFloat(els.exportQuality.value);
+            
+            const dataUrl = exportCanvasWithSettings(els.canvas, format, quality);
             const a = document.createElement('a');
             a.download = `${state.originalName}_edit.${getExtension(format)}`;
             a.href = dataUrl;
@@ -608,7 +689,8 @@
                     await new Promise(r => { img.onload = r; img.src = URL.createObjectURL(file); });
                     const processedCanvas = await applyActionsToImage(img, state.currentActions);
                     
-                    const dataUrl = processedCanvas.toDataURL(format, quality);
+                    // 应用设置：背景色填充与大小精准压缩
+                    const dataUrl = exportCanvasWithSettings(processedCanvas, format, quality);
                     
                     // 触发逐个下载
                     const a = document.createElement('a');
@@ -630,6 +712,11 @@
                 btn.disabled = false;
             }
         });
+
+        // 注册 Service Worker (离线支持)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed:', err));
+        }
     </script>
 </body>
 </html>
