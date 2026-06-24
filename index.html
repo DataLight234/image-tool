@@ -265,9 +265,10 @@
             const reader = new FileReader();
             reader.onload = (e) => loadNewImage(e.target.result, true);
             reader.readAsDataURL(file);
-        } else {
-            updateBatchUI(); // 仅追加文件时，刷新批量下载按钮状态
         }
+        
+        // 修复：无论是首次上传多张，还是追加图片，都需要立即刷新批量按钮的状态
+        updateBatchUI();
     }
 
     els.resetBtn.addEventListener('click', () => location.reload());
