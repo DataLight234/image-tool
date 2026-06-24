@@ -2,12 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 	<link rel="manifest" href="manifest.json">
-    <title>轻量级图片处理工具 V4</title>
+    <title>轻量级图片处理工具 V5</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 JSZip 用于批量打包下载，解决多文件下载浏览器兼容问题 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        /* 自定义部分样式以增强体验 */
         .checkered-bg {
             background-color: #f0f0f0;
             background-image: 
@@ -18,99 +19,105 @@
             background-size: 20px 20px;
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-        /* 禁用数字输入框的滚轮调整 */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; touch-action: manipulation; }
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        .crop-active #previewImage { cursor: crosshair; }
-        .crop-box {
+        
+        /* 裁剪框相关样式 */
+        .crop-overlay-shadow {
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+        }
+        .crop-handle {
             position: absolute;
-            border: 2px solid #2563eb;
-            background: rgba(37, 99, 235, 0.12);
-            box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.28);
-            pointer-events: none;
+            width: 16px;
+            height: 16px;
+            background-color: #3b82f6;
+            border: 2px solid white;
+            border-radius: 50%;
+            z-index: 20;
         }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen text-gray-800">
 
-    <!-- 顶部导航栏 -->
-    <header class="bg-white shadow-sm sticky top-0 z-10">
+    <header class="bg-white shadow-sm sticky top-0 z-30">
         <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
             <h1 class="text-xl font-bold text-blue-600 flex items-center gap-2">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                图片处理大师
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                图片处理大师 V5
             </h1>
-            <button id="resetBtn" class="hidden text-sm text-gray-500 hover:text-gray-700 transition font-medium">重新上传</button>
+            <button id="resetBtn" class="hidden text-sm text-gray-500 hover:text-gray-700 transition font-medium bg-gray-100 px-3 py-1 rounded-full">重新上传</button>
         </div>
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-6">
         
-        <!-- 初始上传区域 -->
-        <div id="uploadArea" class="flex flex-col items-center justify-center w-full h-[60vh] border-2 border-dashed border-blue-300 rounded-2xl bg-blue-50 hover:bg-blue-100 transition cursor-pointer relative overflow-hidden">
+        <div id="uploadArea" class="flex flex-col items-center justify-center w-full h-[60vh] border-2 border-dashed border-blue-300 rounded-2xl bg-blue-50 hover:bg-blue-100 transition cursor-pointer relative overflow-hidden group">
             <input type="file" id="fileInput" accept="image/*" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
-            <svg class="w-16 h-16 text-blue-400 mb-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+            <svg class="w-16 h-16 text-blue-400 mb-4 group-hover:scale-110 transition duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
             <p class="text-lg font-medium text-blue-700">点击或拖拽上传图片</p>
-            <p class="text-sm text-blue-500 mt-2">支持 JPG, PNG, WEBP 格式，可多选批量导出</p>
+            <p class="text-sm text-blue-500 mt-2">支持 JPG, PNG, WEBP，多选自动启用批量应用与打包</p>
         </div>
 
-        <!-- 工作台区域 (上传后显示) -->
         <div id="workspace" class="hidden flex flex-col lg:flex-row gap-6 items-start">
             
-            <!-- 左侧：预览区 (修复了手机端占据全屏的问题) -->
-            <div class="w-full lg:flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col lg:sticky lg:top-20">
+            <div class="w-full lg:flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col lg:sticky lg:top-24">
                 <div class="p-3 bg-gray-50 border-b text-sm text-gray-500 flex justify-between items-center">
                     <span class="font-medium">当前效果预览</span>
                     <span id="imageInfo" class="font-mono bg-white px-2 py-1 rounded text-xs border border-gray-200">加载中...</span>
                 </div>
-                <!-- 响应式高度控制：手机端最大45vh，电脑端最大70vh -->
-                <div id="previewFrame" class="flex-1 checkered-bg p-4 flex items-center justify-center min-h-[250px] lg:min-h-[400px] max-h-[45vh] lg:max-h-[70vh] overflow-auto relative group">
-                    <img id="previewImage" src="" alt="预览" class="max-w-full max-h-full object-contain shadow-md rounded transition-all duration-300">
-                    <div id="cropBox" class="crop-box hidden"></div>
+                <!-- 预览区 -->
+                <div id="previewFrame" class="flex-1 checkered-bg p-4 flex items-center justify-center min-h-[300px] lg:min-h-[500px] overflow-hidden relative">
+                    
+                    <!-- 图片容器：严丝合缝包裹图片，用于绝对定位裁剪框 -->
+                    <div id="imageContainer" class="relative shadow-md rounded overflow-hidden flex items-center justify-center select-none" style="max-width: 100%; max-height: 100%;">
+                        <img id="previewImage" src="" alt="预览" class="max-w-full max-h-full block transition-opacity duration-300 pointer-events-none">
+                        
+                        <!-- 交互式裁剪框 -->
+                        <div id="cropBox" class="hidden absolute border-2 border-blue-500 crop-overlay-shadow z-10 box-border cursor-move" style="touch-action: none;">
+                            <!-- 参考线 -->
+                            <div class="absolute w-full h-[33.33%] top-[33.33%] border-y border-white/50 border-dashed pointer-events-none"></div>
+                            <div class="absolute h-full w-[33.33%] left-[33.33%] border-x border-white/50 border-dashed pointer-events-none"></div>
+                            <!-- 8个控制点 -->
+                            <div class="crop-handle -top-2 -left-2 cursor-nwse-resize" data-action="tl"></div>
+                            <div class="crop-handle -top-2 left-1/2 -translate-x-1/2 cursor-ns-resize" data-action="tm"></div>
+                            <div class="crop-handle -top-2 -right-2 cursor-nesw-resize" data-action="tr"></div>
+                            <div class="crop-handle top-1/2 -right-2 -translate-y-1/2 cursor-ew-resize" data-action="mr"></div>
+                            <div class="crop-handle -bottom-2 -right-2 cursor-nwse-resize" data-action="br"></div>
+                            <div class="crop-handle -bottom-2 left-1/2 -translate-x-1/2 cursor-ns-resize" data-action="bm"></div>
+                            <div class="crop-handle -bottom-2 -left-2 cursor-nesw-resize" data-action="bl"></div>
+                            <div class="crop-handle top-1/2 -left-2 -translate-y-1/2 cursor-ew-resize" data-action="ml"></div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
-            <!-- 右侧：控制面板 -->
+            <!-- 控制面板 -->
             <div class="w-full lg:w-80 flex flex-col gap-4">
-
-                <!-- 1. 历史记录模块 -->
+                
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <h2 class="text-sm font-bold mb-3 flex items-center gap-2 text-gray-700">
-                        <span>↩️</span> 历史记录
-                    </h2>
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-sm font-bold flex items-center gap-2 text-gray-700"><span>↩️</span> 历史记录</h2>
+                    </div>
                     <div class="grid grid-cols-2 gap-2">
                         <button id="undoBtn" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 py-2 rounded-lg transition text-sm font-medium disabled:opacity-40 disabled:pointer-events-none">撤销</button>
                         <button id="redoBtn" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 py-2 rounded-lg transition text-sm font-medium disabled:opacity-40 disabled:pointer-events-none">重做</button>
                     </div>
                 </div>
                 
-                <!-- 2. 旋转与翻转模块 -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <h2 class="text-sm font-bold mb-3 flex items-center gap-2 text-gray-700">
-                        <span>🔄</span> 旋转与翻转
-                    </h2>
+                    <h2 class="text-sm font-bold mb-3 flex items-center gap-2 text-gray-700"><span>🔄</span> 旋转与翻转</h2>
                     <div class="grid grid-cols-4 gap-2">
-                        <button id="rotateLeftBtn" class="tool-btn bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center" title="向左旋转90°">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-                        </button>
-                        <button id="rotateRightBtn" class="tool-btn bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center" title="向右旋转90°">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10H11a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"/></svg>
-                        </button>
-                        <button id="flipHBtn" class="tool-btn bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center" title="水平翻转">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-                        </button>
-                        <button id="flipVBtn" class="tool-btn bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center" title="垂直翻转">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
-                        </button>
+                        <button id="rotateLeftBtn" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg></button>
+                        <button id="rotateRightBtn" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10H11a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"/></svg></button>
+                        <button id="flipHBtn" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></button>
+                        <button id="flipVBtn" class="bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 p-2 rounded-lg transition flex justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4-4l-4-4"/></svg></button>
                     </div>
                 </div>
 
-                <!-- 3. 尺寸缩放模块 -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <h2 class="text-sm font-bold mb-3 flex items-center gap-2 text-gray-700">
-                        <span>📏</span> 尺寸缩放 (修改分辨率)
-                    </h2>
+                    <h2 class="text-sm font-bold mb-3 flex items-center gap-2 text-gray-700"><span>📏</span> 尺寸缩放</h2>
                     <div class="grid grid-cols-2 gap-3 mb-3">
                         <div>
                             <label class="text-xs text-gray-500 block mb-1">宽度 (px)</label>
@@ -124,178 +131,134 @@
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center">
                             <input type="checkbox" id="keepRatio" checked class="rounded text-blue-500 w-4 h-4 mr-2">
-                            <label for="keepRatio" class="text-sm text-gray-600 cursor-pointer select-none">锁定宽高比</label>
+                            <label for="keepRatio" class="text-sm text-gray-600 cursor-pointer select-none">锁定比例</label>
                         </div>
-                        <button id="resetSizeBtn" class="text-xs text-blue-500 hover:text-blue-700 hover:underline transition">重置原大小</button>
+                        <button id="resetSizeBtn" class="text-xs text-blue-500 hover:text-blue-700">重置大小</button>
                     </div>
-                    <button id="applyResizeBtn" class="w-full bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium py-2 rounded-lg transition text-sm">
-                        应用缩放
-                    </button>
+                    <button id="applyResizeBtn" class="w-full bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium py-2 rounded-lg transition text-sm">应用缩放</button>
                 </div>
 
-                <!-- 4. 裁剪模块 -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <h2 class="text-sm font-bold mb-3 flex items-center gap-2 text-gray-700">
-                        <span>✂️</span> 裁剪
-                    </h2>
+                    <h2 class="text-sm font-bold mb-3 flex items-center gap-2 text-gray-700"><span>✂️</span> 裁剪</h2>
                     <div class="grid grid-cols-3 gap-2 mb-3">
-                        <button class="crop-btn bg-gray-50 hover:bg-gray-100 border border-gray-200 py-2 rounded-lg text-sm font-medium transition" data-ratio="1">1:1 方形</button>
-                        <button class="crop-btn bg-gray-50 hover:bg-gray-100 border border-gray-200 py-2 rounded-lg text-sm font-medium transition" data-ratio="1.333">4:3</button>
-                        <button class="crop-btn bg-gray-50 hover:bg-gray-100 border border-gray-200 py-2 rounded-lg text-sm font-medium transition" data-ratio="1.777">16:9</button>
+                        <button class="crop-btn bg-gray-50 hover:bg-gray-100 border border-gray-200 py-2 rounded-lg text-sm transition" data-ratio="1">1:1</button>
+                        <button class="crop-btn bg-gray-50 hover:bg-gray-100 border border-gray-200 py-2 rounded-lg text-sm transition" data-ratio="1.333">4:3</button>
+                        <button class="crop-btn bg-gray-50 hover:bg-gray-100 border border-gray-200 py-2 rounded-lg text-sm transition" data-ratio="1.777">16:9</button>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <button id="freeCropBtn" class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 py-2 rounded-lg transition text-sm font-medium">自由裁剪</button>
-                        <button id="applyFreeCropBtn" class="bg-blue-600 text-white hover:bg-blue-700 py-2 rounded-lg transition text-sm font-medium disabled:opacity-40 disabled:pointer-events-none" disabled>应用裁剪</button>
+                        <button id="applyFreeCropBtn" class="bg-blue-600 text-white hover:bg-blue-700 py-2 rounded-lg transition text-sm font-medium disabled:opacity-40" disabled>确认裁剪</button>
                     </div>
                 </div>
 
-                <!-- 5. 压缩与导出 -->
                 <div class="bg-white p-5 rounded-2xl shadow-md border border-blue-100 mt-auto ring-1 ring-blue-50">
-                    <h2 class="text-md font-bold mb-4 flex items-center gap-2 text-blue-800">
-                        <span>🗜️</span> 压缩与导出
-                    </h2>
+                    <h2 class="text-md font-bold mb-4 flex items-center gap-2 text-blue-800"><span>🗜️</span> 导出设置</h2>
                     <div class="mb-4">
-                        <label class="text-xs text-gray-500 block mb-1">选择目标格式</label>
-                        <select id="exportFormat" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select id="exportFormat" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
                             <option value="original">保持原格式</option>
                             <option value="image/jpeg">JPG (适合照片，可压缩)</option>
-                            <option value="image/png">PNG (无损，支持透明底)</option>
-                            <option value="image/webp">WEBP (现代格式，高压缩率)</option>
+                            <option value="image/png">PNG (无损，支持透明)</option>
+                            <option value="image/webp">WEBP (现代格式)</option>
                         </select>
                     </div>
-                    <div class="mb-4" id="backgroundControl">
-                        <label class="text-xs text-gray-500 block mb-1">透明底转 JPG 时</label>
-                        <select id="jpegBackground" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="white">填充白底</option>
-                            <option value="black">填充黑底</option>
-                        </select>
-                    </div>
-                    <div class="mb-5" id="qualityControl">
+                    <div class="mb-4" id="qualityControl">
                         <label class="text-xs text-gray-500 flex justify-between mb-1">
-                            <span>压缩质量 (仅 JPG/WEBP)</span>
+                            <span>压缩质量</span>
                             <span id="qualityValue" class="font-mono text-blue-600 bg-blue-50 px-1 rounded">90%</span>
                         </label>
-                        <input type="range" id="exportQuality" min="0.1" max="1" step="0.05" value="0.9" class="w-full accent-blue-600 cursor-pointer">
+                        <input type="range" id="exportQuality" min="0.1" max="1" step="0.05" value="0.9" class="w-full accent-blue-600">
                     </div>
-                    <div class="mb-4">
-                        <label class="text-xs text-gray-500 block mb-1">目标大小 KB (可选)</label>
-                        <input type="number" id="targetSizeKb" min="1" placeholder="例如 500" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <button id="downloadBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 transition flex justify-center items-center gap-2 active:scale-95">
+                    <button id="downloadBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition flex justify-center items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        保存图片
+                        保存当前图片
                     </button>
-                    <button id="batchDownloadBtn" class="w-full mt-3 bg-gray-50 hover:bg-blue-50 text-blue-700 border border-blue-100 font-medium py-2.5 rounded-xl transition disabled:opacity-40 disabled:pointer-events-none">
-                        批量导出全部
-                    </button>
-                    <p id="batchStatus" class="text-xs text-gray-500 mt-3 hidden"></p>
+                    
+                    <div id="batchArea" class="mt-4 pt-4 border-t border-gray-100 hidden">
+                        <p class="text-xs text-gray-500 mb-2 font-medium">✨ 当前修改（裁切/缩放等）将应用到全部图片</p>
+                        <button id="batchDownloadBtn" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold py-3 rounded-xl transition flex justify-center items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                            <span id="batchBtnText">打包下载全部 ZIP</span>
+                        </button>
+                        <p id="batchStatus" class="text-xs text-indigo-600 mt-2 text-center font-medium"></p>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- 隐藏的 Canvas 用于底层图像像素级处理 -->
     <canvas id="processCanvas" style="display: none;"></canvas>
 
     <script>
-        /**
-         * 核心逻辑部分
-         */
         const state = {
-            currentImage: new Image(), // 当前内存中的图片对象
+            currentImage: new Image(),
             originalName: 'image',
             originalMime: 'image/png',
-            currentWidth: 0,
-            currentHeight: 0,
-            aspectRatio: 1,
-            originalWidth: 0,
-            originalHeight: 0,
+            currentWidth: 0, currentHeight: 0, aspectRatio: 1,
+            originalWidth: 0, originalHeight: 0,
             selectedFiles: [],
             history: [],
             historyIndex: -1,
-            cropMode: false,
-            cropStart: null,
-            cropSelection: null
+            currentActions: [], // 记录当前图片上积累的编辑动作序列
+            cropMode: false
         };
 
-        // DOM 元素引用
         const els = {
             uploadArea: document.getElementById('uploadArea'),
             fileInput: document.getElementById('fileInput'),
             workspace: document.getElementById('workspace'),
-            previewFrame: document.getElementById('previewFrame'),
             previewImage: document.getElementById('previewImage'),
+            imageContainer: document.getElementById('imageContainer'),
             cropBox: document.getElementById('cropBox'),
             imageInfo: document.getElementById('imageInfo'),
             resetBtn: document.getElementById('resetBtn'),
             
-            // 工具按钮
             undoBtn: document.getElementById('undoBtn'),
             redoBtn: document.getElementById('redoBtn'),
-            rotateLeftBtn: document.getElementById('rotateLeftBtn'),
-            rotateRightBtn: document.getElementById('rotateRightBtn'),
-            flipHBtn: document.getElementById('flipHBtn'),
-            flipVBtn: document.getElementById('flipVBtn'),
-
             resizeWidth: document.getElementById('resizeWidth'),
             resizeHeight: document.getElementById('resizeHeight'),
             keepRatio: document.getElementById('keepRatio'),
-            applyResizeBtn: document.getElementById('applyResizeBtn'),
-            resetSizeBtn: document.getElementById('resetSizeBtn'),
-            cropBtns: document.querySelectorAll('.crop-btn'),
-            freeCropBtn: document.getElementById('freeCropBtn'),
-            applyFreeCropBtn: document.getElementById('applyFreeCropBtn'),
-
+            
             exportFormat: document.getElementById('exportFormat'),
-            backgroundControl: document.getElementById('backgroundControl'),
-            jpegBackground: document.getElementById('jpegBackground'),
             qualityControl: document.getElementById('qualityControl'),
             exportQuality: document.getElementById('exportQuality'),
             qualityValue: document.getElementById('qualityValue'),
-            targetSizeKb: document.getElementById('targetSizeKb'),
-            downloadBtn: document.getElementById('downloadBtn'),
-            batchDownloadBtn: document.getElementById('batchDownloadBtn'),
-            batchStatus: document.getElementById('batchStatus'),
             
             canvas: document.getElementById('processCanvas'),
             ctx: document.getElementById('processCanvas').getContext('2d', { willReadFrequently: true })
         };
 
-        // --- 初始化与辅助函数 ---
-
-        els.fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            state.selectedFiles = Array.from(e.target.files).filter(item => item.type.startsWith('image/'));
-            loadFileIntoEditor(file);
-            updateBatchUI();
+        // --- 全局拖拽与上传逻辑 ---
+        ['dragover', 'dragleave', 'drop'].forEach(evt => {
+            document.body.addEventListener(evt, e => e.preventDefault());
         });
-
-        els.resetBtn.addEventListener('click', () => {
-            els.workspace.classList.add('hidden');
-            els.uploadArea.classList.remove('hidden');
-            els.resetBtn.classList.add('hidden');
-            els.fileInput.value = '';
-            els.previewImage.src = '';
-            state.selectedFiles = [];
-            state.history = [];
-            state.historyIndex = -1;
-            cancelFreeCrop();
-            updateHistoryButtons();
-            updateBatchUI();
+        
+        els.uploadArea.addEventListener('dragover', () => els.uploadArea.classList.add('bg-blue-100', 'border-blue-500'));
+        els.uploadArea.addEventListener('dragleave', () => els.uploadArea.classList.remove('bg-blue-100', 'border-blue-500'));
+        els.uploadArea.addEventListener('drop', e => {
+            els.uploadArea.classList.remove('bg-blue-100', 'border-blue-500');
+            handleFilesSelect(e.dataTransfer.files);
         });
+        els.fileInput.addEventListener('change', e => handleFilesSelect(e.target.files));
 
-        function loadFileIntoEditor(file) {
+        function handleFilesSelect(files) {
+            const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (!validFiles.length) return;
+            state.selectedFiles = validFiles;
+            
+            const file = validFiles[0];
             state.originalName = file.name.substring(0, file.name.lastIndexOf('.')) || 'image';
             state.originalMime = file.type || 'image/png';
+            
             const reader = new FileReader();
-            reader.onload = (event) => loadNewImage(event.target.result, true, true);
+            reader.onload = (e) => loadNewImage(e.target.result, true);
             reader.readAsDataURL(file);
+            updateBatchUI();
         }
 
-        // 加载图片并更新状态
+        els.resetBtn.addEventListener('click', () => location.reload());
+
         function loadNewImage(dataUrl, isFirstLoad = false, addToHistory = true) {
-            els.previewImage.style.opacity = '0.4';
+            els.previewImage.style.opacity = '0';
             state.currentImage.onload = () => {
                 state.currentWidth = state.currentImage.width;
                 state.currentHeight = state.currentImage.height;
@@ -304,13 +267,7 @@
                 if (isFirstLoad) {
                     state.originalWidth = state.currentWidth;
                     state.originalHeight = state.currentHeight;
-                }
-                
-                els.previewImage.src = dataUrl;
-                setTimeout(() => els.previewImage.style.opacity = '1', 50);
-                updateUIInfo();
-                
-                if (isFirstLoad) {
+                    state.currentActions = [];
                     state.history = [];
                     state.historyIndex = -1;
                     els.uploadArea.classList.add('hidden');
@@ -318,22 +275,22 @@
                     els.workspace.classList.add('flex');
                     els.resetBtn.classList.remove('hidden');
                 }
+                
+                els.previewImage.src = dataUrl;
+                setTimeout(() => els.previewImage.style.opacity = '1', 50);
+                
+                els.imageInfo.textContent = `${state.currentWidth} × ${state.currentHeight} px`;
+                els.resizeWidth.value = state.currentWidth;
+                els.resizeHeight.value = state.currentHeight;
+                
                 updateCanvasWithCurrentImage();
-                if (addToHistory) pushHistory(dataUrl);
+                if (addToHistory) pushHistory(dataUrl, [...state.currentActions]);
                 updateHistoryButtons();
-                toggleQualityControl();
                 cancelFreeCrop();
             };
             state.currentImage.src = dataUrl;
         }
 
-        function updateUIInfo() {
-            els.imageInfo.textContent = `${state.currentWidth} × ${state.currentHeight} px`;
-            els.resizeWidth.value = state.currentWidth;
-            els.resizeHeight.value = state.currentHeight;
-        }
-
-        // 将当前状态的图片绘制到 Canvas 上
         function updateCanvasWithCurrentImage() {
             els.canvas.width = state.currentWidth;
             els.canvas.height = state.currentHeight;
@@ -341,16 +298,17 @@
             els.ctx.drawImage(state.currentImage, 0, 0);
         }
 
-        // 通用 Canvas 处理辅助函数
-        function applyTransformToImage(transformFn) {
+        // --- 动作管道核心：记录用户动作以支持批量应用 ---
+        function applyTransformToImage(action, transformFn) {
             transformFn(els.canvas, els.ctx);
-            loadNewImage(els.canvas.toDataURL('image/png')); // 使用 PNG 保证中间过程无损
+            state.currentActions.push(action);
+            loadNewImage(els.canvas.toDataURL('image/png'), false, true);
         }
 
-        function pushHistory(dataUrl) {
+        function pushHistory(dataUrl, actions) {
             state.history = state.history.slice(0, state.historyIndex + 1);
-            state.history.push(dataUrl);
-            if (state.history.length > 30) state.history.shift();
+            state.history.push({ url: dataUrl, actions: actions });
+            if (state.history.length > 20) state.history.shift();
             state.historyIndex = state.history.length - 1;
         }
 
@@ -359,91 +317,81 @@
             els.redoBtn.disabled = state.historyIndex >= state.history.length - 1;
         }
 
-        function updateBatchUI() {
-            const count = state.selectedFiles.length;
-            els.batchDownloadBtn.disabled = count < 2;
-            els.batchDownloadBtn.textContent = count > 1 ? `批量导出全部 (${count} 张)` : '批量导出全部';
-            els.batchStatus.classList.toggle('hidden', count < 2);
-            els.batchStatus.textContent = count > 1 ? '已选择多张图片，可按当前导出设置批量保存。' : '';
-        }
-
         els.undoBtn.addEventListener('click', () => {
             if (state.historyIndex <= 0) return;
             state.historyIndex -= 1;
-            loadNewImage(state.history[state.historyIndex], false, false);
+            const hist = state.history[state.historyIndex];
+            state.currentActions = [...hist.actions];
+            loadNewImage(hist.url, false, false);
         });
 
         els.redoBtn.addEventListener('click', () => {
             if (state.historyIndex >= state.history.length - 1) return;
             state.historyIndex += 1;
-            loadNewImage(state.history[state.historyIndex], false, false);
+            const hist = state.history[state.historyIndex];
+            state.currentActions = [...hist.actions];
+            loadNewImage(hist.url, false, false);
         });
 
-        // --- 图像编辑功能模块 ---
-
-        // 1. 旋转与翻转逻辑
-        els.rotateLeftBtn.addEventListener('click', () => {
-            applyTransformToImage((canvas, ctx) => {
+        // --- 工具功能 ---
+        document.getElementById('rotateLeftBtn').addEventListener('click', () => {
+            applyTransformToImage({ type: 'rotate', angle: -90 }, (canvas, ctx) => {
                 const newW = state.currentHeight; const newH = state.currentWidth;
                 canvas.width = newW; canvas.height = newH;
-                ctx.translate(newW / 2, newH / 2);
-                ctx.rotate(-90 * Math.PI / 180);
+                ctx.translate(newW / 2, newH / 2); ctx.rotate(-90 * Math.PI / 180);
                 ctx.drawImage(state.currentImage, -state.currentWidth / 2, -state.currentHeight / 2);
             });
         });
-        els.rotateRightBtn.addEventListener('click', () => {
-            applyTransformToImage((canvas, ctx) => {
+        
+        document.getElementById('rotateRightBtn').addEventListener('click', () => {
+            applyTransformToImage({ type: 'rotate', angle: 90 }, (canvas, ctx) => {
                 const newW = state.currentHeight; const newH = state.currentWidth;
                 canvas.width = newW; canvas.height = newH;
-                ctx.translate(newW / 2, newH / 2);
-                ctx.rotate(90 * Math.PI / 180);
+                ctx.translate(newW / 2, newH / 2); ctx.rotate(90 * Math.PI / 180);
                 ctx.drawImage(state.currentImage, -state.currentWidth / 2, -state.currentHeight / 2);
             });
         });
-        els.flipHBtn.addEventListener('click', () => {
-             applyTransformToImage((canvas, ctx) => {
+
+        document.getElementById('flipHBtn').addEventListener('click', () => {
+             applyTransformToImage({ type: 'flipH' }, (canvas, ctx) => {
                 canvas.width = state.currentWidth; canvas.height = state.currentHeight;
                 ctx.translate(state.currentWidth, 0); ctx.scale(-1, 1);
                 ctx.drawImage(state.currentImage, 0, 0);
             });
         });
-        els.flipVBtn.addEventListener('click', () => {
-             applyTransformToImage((canvas, ctx) => {
+
+        document.getElementById('flipVBtn').addEventListener('click', () => {
+             applyTransformToImage({ type: 'flipV' }, (canvas, ctx) => {
                 canvas.width = state.currentWidth; canvas.height = state.currentHeight;
                 ctx.translate(0, state.currentHeight); ctx.scale(1, -1);
                 ctx.drawImage(state.currentImage, 0, 0);
             });
         });
 
-        // 2. 尺寸缩放逻辑
-        els.resizeWidth.addEventListener('input', (e) => {
-            if (els.keepRatio.checked && e.target.value && state.aspectRatio) {
+        // 缩放
+        els.resizeWidth.addEventListener('input', e => {
+            if (els.keepRatio.checked && e.target.value && state.aspectRatio)
                 els.resizeHeight.value = Math.round(e.target.value / state.aspectRatio);
-            }
         });
-        els.resizeHeight.addEventListener('input', (e) => {
-            if (els.keepRatio.checked && e.target.value && state.aspectRatio) {
+        els.resizeHeight.addEventListener('input', e => {
+            if (els.keepRatio.checked && e.target.value && state.aspectRatio)
                 els.resizeWidth.value = Math.round(e.target.value * state.aspectRatio);
-            }
         });
-        els.resetSizeBtn.addEventListener('click', () => {
-            els.resizeWidth.value = state.originalWidth;
-            els.resizeHeight.value = state.originalHeight;
-            if (els.keepRatio.checked) els.resizeWidth.dispatchEvent(new Event('input'));
+        document.getElementById('resetSizeBtn').addEventListener('click', () => {
+            els.resizeWidth.value = state.originalWidth; els.resizeHeight.value = state.originalHeight;
         });
-        els.applyResizeBtn.addEventListener('click', () => {
-            const newW = parseInt(els.resizeWidth.value);
-            const newH = parseInt(els.resizeHeight.value);
-            if (!newW || !newH || newW <= 0 || newH <= 0) return alert("请输入有效的尺寸！");
-            applyTransformToImage((canvas, ctx) => {
-                canvas.width = newW; canvas.height = newH;
-                ctx.drawImage(state.currentImage, 0, 0, newW, newH);
+        document.getElementById('applyResizeBtn').addEventListener('click', () => {
+            const w = parseInt(els.resizeWidth.value), h = parseInt(els.resizeHeight.value);
+            if (!w || !h || w <= 0 || h <= 0) return alert("请输入有效尺寸！");
+            applyTransformToImage({ type: 'resize', width: w, height: h }, (canvas, ctx) => {
+                canvas.width = w; canvas.height = h;
+                ctx.drawImage(state.currentImage, 0, 0, w, h);
             });
         });
 
-        // 3. 裁剪逻辑
-        els.cropBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        // 比例裁剪
+        document.querySelectorAll('.crop-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
                 const targetRatio = parseFloat(e.target.dataset.ratio);
                 let cropW, cropH;
                 if (state.aspectRatio > targetRatio) {
@@ -453,257 +401,219 @@
                 }
                 const startX = (state.currentWidth - cropW) / 2;
                 const startY = (state.currentHeight - cropH) / 2;
-                applyTransformToImage((canvas, ctx) => {
+                
+                const action = {
+                    type: 'crop', 
+                    xRatio: startX/state.currentWidth, yRatio: startY/state.currentHeight,
+                    wRatio: cropW/state.currentWidth, hRatio: cropH/state.currentHeight
+                };
+                applyTransformToImage(action, (canvas, ctx) => {
                     canvas.width = cropW; canvas.height = cropH;
                     ctx.drawImage(state.currentImage, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
                 });
             });
         });
 
-        function getCropPoint(event) {
-            const imgRect = els.previewImage.getBoundingClientRect();
-            const frameRect = els.previewFrame.getBoundingClientRect();
-            const x = Math.min(Math.max(event.clientX - imgRect.left, 0), imgRect.width);
-            const y = Math.min(Math.max(event.clientY - imgRect.top, 0), imgRect.height);
-            return {
-                x,
-                y,
-                frameX: imgRect.left - frameRect.left + x,
-                frameY: imgRect.top - frameRect.top + y
-            };
-        }
-
-        function renderCropBox(start, end) {
-            const left = Math.min(start.frameX, end.frameX);
-            const top = Math.min(start.frameY, end.frameY);
-            const width = Math.abs(end.frameX - start.frameX);
-            const height = Math.abs(end.frameY - start.frameY);
-            els.cropBox.style.left = `${left}px`;
-            els.cropBox.style.top = `${top}px`;
-            els.cropBox.style.width = `${width}px`;
-            els.cropBox.style.height = `${height}px`;
-            els.cropBox.classList.toggle('hidden', width < 4 || height < 4);
-        }
+        // --- 交互式自由裁剪核心逻辑 ---
+        let isDragging = false;
+        let dragAction = ''; 
+        let dragStart = { x: 0, y: 0, l: 0, t: 0, w: 0, h: 0 };
 
         function cancelFreeCrop() {
             state.cropMode = false;
-            state.cropStart = null;
-            state.cropSelection = null;
-            els.previewFrame.classList.remove('crop-active');
             els.cropBox.classList.add('hidden');
-            els.applyFreeCropBtn.disabled = true;
-            els.freeCropBtn.textContent = '自由裁剪';
+            document.getElementById('applyFreeCropBtn').disabled = true;
+            document.getElementById('freeCropBtn').textContent = '自由裁剪';
         }
 
-        els.freeCropBtn.addEventListener('click', () => {
-            if (state.cropMode) {
-                cancelFreeCrop();
-                return;
-            }
+        document.getElementById('freeCropBtn').addEventListener('click', () => {
+            if (state.cropMode) return cancelFreeCrop();
             state.cropMode = true;
-            state.cropStart = null;
-            state.cropSelection = null;
-            els.previewFrame.classList.add('crop-active');
-            els.applyFreeCropBtn.disabled = true;
-            els.cropBox.classList.add('hidden');
-            els.freeCropBtn.textContent = '取消裁剪';
+            els.cropBox.style.left = '10%';
+            els.cropBox.style.top = '10%';
+            els.cropBox.style.width = '80%';
+            els.cropBox.style.height = '80%';
+            els.cropBox.classList.remove('hidden');
+            document.getElementById('applyFreeCropBtn').disabled = false;
+            document.getElementById('freeCropBtn').textContent = '取消裁剪';
         });
 
-        els.previewImage.addEventListener('pointerdown', (e) => {
+        function getClientPos(e) {
+            return e.touches ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY };
+        }
+
+        els.cropBox.addEventListener('pointerdown', e => {
             if (!state.cropMode) return;
             e.preventDefault();
-            els.previewImage.setPointerCapture(e.pointerId);
-            state.cropStart = getCropPoint(e);
-            state.cropSelection = null;
+            isDragging = true;
+            dragAction = e.target.dataset.action || 'move';
+            const pos = getClientPos(e);
+            dragStart.x = pos.x; dragStart.y = pos.y;
+            dragStart.l = parseFloat(els.cropBox.style.left) || 0;
+            dragStart.t = parseFloat(els.cropBox.style.top) || 0;
+            dragStart.w = parseFloat(els.cropBox.style.width) || 100;
+            dragStart.h = parseFloat(els.cropBox.style.height) || 100;
+            els.cropBox.setPointerCapture(e.pointerId);
         });
 
-        els.previewImage.addEventListener('pointermove', (e) => {
-            if (!state.cropMode || !state.cropStart) return;
-            const current = getCropPoint(e);
-            renderCropBox(state.cropStart, current);
-            state.cropSelection = { start: state.cropStart, end: current };
-            els.applyFreeCropBtn.disabled = Math.abs(current.x - state.cropStart.x) < 8 || Math.abs(current.y - state.cropStart.y) < 8;
+        els.cropBox.addEventListener('pointermove', e => {
+            if (!isDragging) return;
+            const rect = els.imageContainer.getBoundingClientRect();
+            const pos = getClientPos(e);
+            const dx = ((pos.x - dragStart.x) / rect.width) * 100;
+            const dy = ((pos.y - dragStart.y) / rect.height) * 100;
+
+            let { l, t, w, h } = dragStart;
+
+            if (dragAction === 'move') {
+                l = Math.min(Math.max(0, l + dx), 100 - w);
+                t = Math.min(Math.max(0, t + dy), 100 - h);
+            } else {
+                if (dragAction.includes('l')) { const maxL = l + w - 5; l = Math.min(Math.max(0, l + dx), maxL); w = dragStart.w + (dragStart.l - l); }
+                if (dragAction.includes('r')) { w = Math.min(Math.max(5, w + dx), 100 - l); }
+                if (dragAction.includes('t')) { const maxT = t + h - 5; t = Math.min(Math.max(0, t + dy), maxT); h = dragStart.h + (dragStart.t - t); }
+                if (dragAction.includes('b')) { h = Math.min(Math.max(5, h + dy), 100 - t); }
+            }
+
+            els.cropBox.style.left = `${l}%`; els.cropBox.style.top = `${t}%`;
+            els.cropBox.style.width = `${w}%`; els.cropBox.style.height = `${h}%`;
         });
 
-        els.previewImage.addEventListener('pointerup', (e) => {
-            if (!state.cropMode || !state.cropStart) return;
-            const current = getCropPoint(e);
-            renderCropBox(state.cropStart, current);
-            state.cropSelection = { start: state.cropStart, end: current };
-            els.applyFreeCropBtn.disabled = Math.abs(current.x - state.cropStart.x) < 8 || Math.abs(current.y - state.cropStart.y) < 8;
-            state.cropStart = null;
+        els.cropBox.addEventListener('pointerup', e => {
+            isDragging = false;
+            els.cropBox.releasePointerCapture(e.pointerId);
         });
 
-        els.applyFreeCropBtn.addEventListener('click', () => {
-            if (!state.cropSelection) return;
-            const imgRect = els.previewImage.getBoundingClientRect();
-            const { start, end } = state.cropSelection;
-            const scaleX = state.currentWidth / imgRect.width;
-            const scaleY = state.currentHeight / imgRect.height;
-            const startX = Math.round(Math.min(start.x, end.x) * scaleX);
-            const startY = Math.round(Math.min(start.y, end.y) * scaleY);
-            const cropW = Math.round(Math.abs(end.x - start.x) * scaleX);
-            const cropH = Math.round(Math.abs(end.y - start.y) * scaleY);
-            if (cropW < 1 || cropH < 1) return;
-            applyTransformToImage((canvas, ctx) => {
-                canvas.width = cropW;
-                canvas.height = cropH;
+        document.getElementById('applyFreeCropBtn').addEventListener('click', () => {
+            const l = parseFloat(els.cropBox.style.left) / 100;
+            const t = parseFloat(els.cropBox.style.top) / 100;
+            const w = parseFloat(els.cropBox.style.width) / 100;
+            const h = parseFloat(els.cropBox.style.height) / 100;
+
+            const action = { type: 'crop', xRatio: l, yRatio: t, wRatio: w, hRatio: h };
+            
+            applyTransformToImage(action, (canvas, ctx) => {
+                const cropW = Math.round(w * state.currentWidth);
+                const cropH = Math.round(h * state.currentHeight);
+                const startX = Math.round(l * state.currentWidth);
+                const startY = Math.round(t * state.currentHeight);
+
+                canvas.width = cropW; canvas.height = cropH;
                 ctx.drawImage(state.currentImage, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
             });
         });
 
-        // ==========================================
-        // 4. 压缩与导出逻辑
-        // ==========================================
+        // --- 导出与批量处理逻辑 ---
         function getOutputFormat(sourceMime = state.originalMime) {
-            const supported = ['image/jpeg', 'image/png', 'image/webp'];
-            if (els.exportFormat.value !== 'original') return els.exportFormat.value;
-            return supported.includes(sourceMime) ? sourceMime : 'image/png';
+            const format = els.exportFormat.value;
+            return format === 'original' ? (['image/jpeg', 'image/png', 'image/webp'].includes(sourceMime) ? sourceMime : 'image/png') : format;
         }
+        function getExtension(format) { return { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[format] || 'png'; }
 
-        function getExtension(format) {
-            const map = {
-                'image/jpeg': 'jpg',
-                'image/png': 'png',
-                'image/webp': 'webp'
-            };
-            return map[format] || 'png';
-        }
+        els.exportFormat.addEventListener('change', () => {
+            els.qualityControl.style.opacity = els.exportFormat.value === 'image/png' ? '0.4' : '1';
+        });
+        els.exportQuality.addEventListener('input', e => els.qualityValue.textContent = Math.round(e.target.value * 100) + '%');
 
-        function dataUrlToBytes(dataUrl) {
-            const commaIndex = dataUrl.indexOf(',');
-            const base64 = commaIndex >= 0 ? dataUrl.slice(commaIndex + 1) : dataUrl;
-            return Math.ceil(base64.length * 3 / 4);
-        }
-
-        function prepareCanvasForExport(sourceImage, width, height, format) {
-            els.canvas.width = width;
-            els.canvas.height = height;
-            els.ctx.clearRect(0, 0, width, height);
-            if (format === 'image/jpeg') {
-                els.ctx.fillStyle = els.jpegBackground.value === 'black' ? '#000000' : '#FFFFFF';
-                els.ctx.fillRect(0, 0, width, height);
+        function updateBatchUI() {
+            const count = state.selectedFiles.length;
+            const batchArea = document.getElementById('batchArea');
+            if (count > 1) {
+                batchArea.classList.remove('hidden');
+                document.getElementById('batchBtnText').textContent = `打包下载全部 (${count} 张)`;
+            } else {
+                batchArea.classList.add('hidden');
             }
-            els.ctx.drawImage(sourceImage, 0, 0, width, height);
         }
 
-        function canvasToTargetDataUrl(format, initialQuality) {
-            const targetKb = parseInt(els.targetSizeKb.value, 10);
-            if (!targetKb || targetKb <= 0 || format === 'image/png') {
-                return els.canvas.toDataURL(format, initialQuality);
-            }
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const format = getOutputFormat();
+            const dataUrl = els.canvas.toDataURL(format, parseFloat(els.exportQuality.value));
+            const a = document.createElement('a');
+            a.download = `${state.originalName}_edit.${getExtension(format)}`;
+            a.href = dataUrl;
+            a.click();
+        });
 
-            const targetBytes = targetKb * 1024;
-            let low = 0.1;
-            let high = initialQuality;
-            let best = els.canvas.toDataURL(format, low);
+        // 核心引擎：在后台默默重现所有的用户操作
+        async function applyActionsToImage(sourceImage, actions) {
+            let tempCanvas = document.createElement('canvas');
+            let tCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+            tempCanvas.width = sourceImage.width;
+            tempCanvas.height = sourceImage.height;
+            tCtx.drawImage(sourceImage, 0, 0);
 
-            if (dataUrlToBytes(best) > targetBytes) return best;
-
-            const highQualityDataUrl = els.canvas.toDataURL(format, high);
-            if (dataUrlToBytes(highQualityDataUrl) <= targetBytes) return highQualityDataUrl;
-
-            for (let i = 0; i < 8; i++) {
-                const mid = (low + high) / 2;
-                const candidate = els.canvas.toDataURL(format, mid);
-                if (dataUrlToBytes(candidate) <= targetBytes) {
-                    best = candidate;
-                    low = mid;
-                } else {
-                    high = mid;
+            for (let action of actions) {
+                const img = new Image();
+                await new Promise(r => { img.onload = r; img.src = tempCanvas.toDataURL('image/png'); });
+                
+                if (action.type === 'rotate') {
+                    tempCanvas.width = img.height; tempCanvas.height = img.width;
+                    tCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+                    tCtx.rotate(action.angle * Math.PI / 180);
+                    tCtx.drawImage(img, -img.width / 2, -img.height / 2);
+                } else if (action.type === 'flipH') {
+                    tCtx.translate(tempCanvas.width, 0); tCtx.scale(-1, 1); tCtx.drawImage(img, 0, 0);
+                } else if (action.type === 'flipV') {
+                    tCtx.translate(0, tempCanvas.height); tCtx.scale(1, -1); tCtx.drawImage(img, 0, 0);
+                } else if (action.type === 'resize') {
+                    tempCanvas.width = action.width; tempCanvas.height = action.height;
+                    tCtx.drawImage(img, 0, 0, action.width, action.height);
+                } else if (action.type === 'crop') {
+                    const cW = Math.round(action.wRatio * img.width), cH = Math.round(action.hRatio * img.height);
+                    const sX = Math.round(action.xRatio * img.width), sY = Math.round(action.yRatio * img.height);
+                    tempCanvas.width = cW; tempCanvas.height = cH;
+                    tCtx.drawImage(img, sX, sY, cW, cH, 0, 0, cW, cH);
                 }
             }
-
-            return best;
+            return tempCanvas;
         }
 
-        function downloadDataUrl(dataUrl, filename) {
-            const link = document.createElement('a');
-            link.download = filename;
-            link.href = dataUrl;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        function loadImageFromDataUrl(dataUrl) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => resolve(img);
-                img.onerror = reject;
-                img.src = dataUrl;
-            });
-        }
-
-        function readFileAsDataUrl(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function buildExportName(baseName, format, indexText = '') {
-            const timestamp = new Date().getTime().toString().slice(-4);
-            return `${baseName}_edit${indexText}_${timestamp}.${getExtension(format)}`;
-        }
-
-        function toggleQualityControl() {
-             const format = getOutputFormat();
-             const isPng = format === 'image/png';
-             const isJpeg = format === 'image/jpeg';
-             els.qualityControl.style.opacity = isPng ? '0.4' : '1';
-             els.qualityControl.style.pointerEvents = isPng ? 'none' : 'auto';
-             els.backgroundControl.style.display = isJpeg ? 'block' : 'none';
-        }
-        els.exportFormat.addEventListener('change', toggleQualityControl);
-        toggleQualityControl();
-
-        els.exportQuality.addEventListener('input', (e) => {
-            els.qualityValue.textContent = Math.round(e.target.value * 100) + '%';
-        });
-
-        els.downloadBtn.addEventListener('click', () => {
-            const format = getOutputFormat();
-            const quality = parseFloat(els.exportQuality.value);
-            
-            prepareCanvasForExport(state.currentImage, state.currentWidth, state.currentHeight, format);
-            const dataUrl = canvasToTargetDataUrl(format, quality);
-            downloadDataUrl(dataUrl, buildExportName(state.originalName, format));
-        });
-
-        els.batchDownloadBtn.addEventListener('click', async () => {
+        document.getElementById('batchDownloadBtn').addEventListener('click', async () => {
             if (state.selectedFiles.length < 2) return;
-            els.batchDownloadBtn.disabled = true;
-            els.batchStatus.classList.remove('hidden');
-
+            const btn = document.getElementById('batchDownloadBtn');
+            const status = document.getElementById('batchStatus');
+            btn.disabled = true;
+            
             try {
+                const zip = new JSZip();
+                const quality = parseFloat(els.exportQuality.value);
+                
                 for (let i = 0; i < state.selectedFiles.length; i++) {
                     const file = state.selectedFiles[i];
-                    const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || `image_${i + 1}`;
+                    status.textContent = `正在处理并打包: ${i + 1} / ${state.selectedFiles.length}`;
+                    
                     const format = getOutputFormat(file.type);
-                    const quality = parseFloat(els.exportQuality.value);
-                    els.batchStatus.textContent = `正在导出 ${i + 1} / ${state.selectedFiles.length}：${file.name}`;
-
-                    const dataUrl = await readFileAsDataUrl(file);
-                    const image = await loadImageFromDataUrl(dataUrl);
-                    prepareCanvasForExport(image, image.width, image.height, format);
-                    const output = canvasToTargetDataUrl(format, quality);
-                    downloadDataUrl(output, buildExportName(baseName, format, `_${String(i + 1).padStart(2, '0')}`));
-                    await new Promise(resolve => setTimeout(resolve, 180));
+                    const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || `image_${i}`;
+                    const fileName = `${baseName}_batch.${getExtension(format)}`;
+                    
+                    // 读取原图并重建操作轨迹
+                    const img = new Image();
+                    await new Promise(r => { img.onload = r; img.src = URL.createObjectURL(file); });
+                    const processedCanvas = await applyActionsToImage(img, state.currentActions);
+                    
+                    const dataUrl = processedCanvas.toDataURL(format, quality);
+                    const base64Data = dataUrl.split(',')[1];
+                    zip.file(fileName, base64Data, {base64: true});
                 }
-                els.batchStatus.textContent = `批量导出完成，共 ${state.selectedFiles.length} 张。`;
-            } catch (error) {
-                els.batchStatus.textContent = `批量导出失败：${error.message || error}`;
+                
+                status.textContent = "生成 ZIP 压缩包中...";
+                const content = await zip.generateAsync({type: "blob"});
+                const zipUrl = URL.createObjectURL(content);
+                
+                const a = document.createElement('a');
+                a.download = `Batch_Export_${new Date().getTime().toString().slice(-4)}.zip`;
+                a.href = zipUrl;
+                a.click();
+                
+                status.textContent = "✅ 打包下载完成！";
+                setTimeout(() => status.textContent = "", 3000);
+            } catch (err) {
+                status.textContent = "❌ 处理失败: " + err.message;
             } finally {
-                els.batchDownloadBtn.disabled = state.selectedFiles.length < 2;
+                btn.disabled = false;
             }
         });
-		
-		if ('serviceWorker' in navigator) {
-			navigator.serviceWorker.register('./sw.js');
-		}
     </script>
 </body>
 </html>
